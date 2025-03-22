@@ -1,0 +1,21 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  padding: 20px;
+}
+
+fieldset {
+  width: max-content;
+}
+
+#cursor,
+#date,
+#card_type {
+  cursor: pointer;
+}
+
+.top {
+  text-decoration: none;
+}
