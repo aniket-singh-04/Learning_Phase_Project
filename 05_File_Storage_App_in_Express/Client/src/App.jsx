@@ -5,9 +5,13 @@ import './App.css'
 
 const router = createBrowserRouter([
   {
-    path:"/*", // yaha (*) ke wajh se user kisi bhi path pe jaiga to directoryView render hoga 
+    path:"/", 
     element: <DirectoryView />
   },
+  {
+    path:"/directory/:dirId", // uper ("/*") hata ke ye isliye set kar rahe hai ki jab nested directroy open ho to hamara component dike 
+    element: <DirectoryView />
+  }
 ]);
 
 function App(){
