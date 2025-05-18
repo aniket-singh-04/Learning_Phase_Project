@@ -1,12 +1,13 @@
 import express from 'express';
 import { createWriteStream, WriteStream } from 'fs';
-import { rm, writeFile } from 'fs/promises';
+import { rm, writeFile , readFile } from 'fs/promises';
 import path from 'path';
 import mime from 'mime';
 import { fileURLToPath } from 'url';
 import filesData from '../filesDB.json' with {type: "json"}
 import foldersData from '../folderDB.json' with {type: "json"}
-
+if (!Array.isArray(filesData)) filesData = []; // for making always filesDB vaild array
+// if (!Array.isArray(foldersData)) foldersData = [];
 
 const router = express.Router();
 
@@ -72,7 +73,7 @@ router.patch("/:id", async (req, res) => {
   res.json({ message: "File renamed successfully" });
 });
 
-// Route: Delete file or directory
+// Route: Delete file 
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   const fileIndex = filesData.findIndex((file) => file.id === id)

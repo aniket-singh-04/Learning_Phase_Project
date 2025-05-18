@@ -3,28 +3,7 @@
     "id": "1234",
     "name": "root",
     "parentDir": null,
-    "files": ["942845c0-95e4-4282-b9f1-f8b1cdce4ec8"],
-    "directories": ["ec5c0d66-5a74-4276-a70c-84208e5b6bcb"]
-  },
-  {
-    "id": "ec5c0d66-5a74-4276-a70c-84208e5b6bcb",
-    "name": "first-leve",
-    "parentDirId": "1234",
-    "files": ["69faa899-8efb-48e2-9ea3-9aafec0824bd"],
-    "directories": ["0dae88ab-fdbc-42ae-a9b7-111fcb4dcadd"]
-  },
-  {
-    "id": "0dae88ab-fdbc-42ae-a9b7-111fcb4dcadd",
-    "name": "second-level",
-    "parentDirId": "ec5c0d66-5a74-4276-a70c-84208e5b6bcb",
-    "files": ["845a2963-977d-42fa-9224-11371cbda1c3"],
-    "directories": ["2a34b5a9-5937-403b-9b1f-1077f537db5a"]
-  },
-  {
-    "id": "2a34b5a9-5937-403b-9b1f-1077f537db5a",
-    "name": "third-leve",
-    "parentDirId": "0dae88ab-fdbc-42ae-a9b7-111fcb4dcadd",
-    "files": ["77a35d48-3ebc-41a7-80b8-8d1c1dd05d4e"],
+    "files": [],
     "directories": []
   }
 ]
