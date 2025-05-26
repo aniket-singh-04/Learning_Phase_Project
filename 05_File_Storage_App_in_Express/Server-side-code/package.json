@@ -1,10 +1,9 @@
 {
-  "name": "server",
+  "name": "01_intro-to-express",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "app.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "node --watch app.js"
   },
   "keywords": [],
@@ -12,8 +11,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "mime": "^4.0.7"
+    "mime-types": "^2.1.35",
+    "mongodb": "^6.16.0"
   }
 }
