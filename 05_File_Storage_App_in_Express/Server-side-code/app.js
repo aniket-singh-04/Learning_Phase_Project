@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import directoryRoutes from "./routes/directoryRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-import checkAuth from "./auth.js";
+import checkAuth from "./middleware/auth.js";
 import { connectDB } from "./db.js";
 
 

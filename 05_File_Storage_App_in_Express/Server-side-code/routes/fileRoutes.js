@@ -1,86 +1,71 @@
 import express from "express";
 import { createWriteStream } from "fs";
-import { rm, writeFile } from "fs/promises";
+import { rm } from "fs/promises";
 import path from "path";
-import crypto from "crypto"; // Ensure you're importing crypto if not already
-import directoriesData from "../directoriesDB.json" with { type: "json" };
-import filesData from "../filesDB.json" with { type: "json" };
+import { ObjectId } from "mongodb";
+import validateIdMiddleware from "../middleware/validateIdMiddleware.js";
+
 
 const router = express.Router();
 
-// ================================
+
+router.param("parentDirId", validateIdMiddleware);
+router.param("id", validateIdMiddleware);
+
 // CREATE
-// ================================
-router.post("/:parentDirId?", (req, res, next) => {
+router.post("/:parentDirId?", async (req, res, next) => {
+  const db = req.db
   const parentDirId = req.params.parentDirId || req.user.rootDirId;
-  const parentDirData = directoriesData.find(
-    (directoryData) => directoryData.id === parentDirId
-  );
+  const parentDirData = await db.collection("directories").findOne({ _id: new ObjectId(String(parentDirId)), userId: req.user._id })
 
   // Check if parent directory exists
   if (!parentDirData) {
     return res.status(404).json({ error: "Parent directory not found!" });
   }
 
-  // Check if the directory belongs to the user
-  if (parentDirData.userId !== req.user.id) {
-    return res
-      .status(403)
-      .json({ error: "You do not have permission to upload to this directory." });
-  }
-
   const filename = req.headers.filename || "untitled";
-  const id = crypto.randomUUID();
   const extension = path.extname(filename);
-  const fullFileName = `${id}${extension}`;
+  const insertedFile = await db.collection("files").insertOne({
+    extension,
+    name: filename,
+    parentDirId: parentDirData._id,
+    userId: req.user._id
+  })
+
+  const fileId = insertedFile.insertedId.toString()
+  const fullFileName = `${fileId}${extension}`;
 
   const writeStream = createWriteStream(`./storage/${fullFileName}`);
   req.pipe(writeStream);
 
   req.on("end", async () => {
-    filesData.push({
-      id,
-      extension,
-      name: filename,
-      parentDirId,
-    });
-
-    parentDirData.files.push(id);
-
-    try {
-      await writeFile("./filesDB.json", JSON.stringify(filesData));
-      await writeFile("./directoriesDB.json", JSON.stringify(directoriesData));
-      return res.status(201).json({ message: "File Uploaded" });
-    } catch (err) {
-      next(err);
-    }
+    return res.status(201).json({ message: "File Uploaded" });
   });
+
+  req.on("error", async (err) => {  // Handle errors during the uploading time 
+    await db.collection("files").deleteOne({ _id: new ObjectId(String(fileId)) });
+    return res.status(500).json({ error: "File upload failed!" });
+  })
 });
 
-// ================================
+
 // READ
-// ================================
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  const fileData = filesData.find((file) => file.id === id);
+  const db = req.db
+  const fileData = await db.collection("files").findOne({ _id: new ObjectId(String(id)), userId: req.user._id }); // here also check the parent directory ownership
 
   // Check if file exists
   if (!fileData) {
     return res.status(404).json({ error: "File not found!" });
   }
 
-  // Check parent directory ownership
-  const parentDir = directoriesData.find((dir) => dir.id === fileData.parentDirId);
-  if (!parentDir) {
-    return res.status(404).json({ error: "Parent directory not found!" });
-  }
-  if (parentDir.userId !== req.user.id) {
-    return res.status(403).json({ error: "You don't have access to this file." });
-  }
 
+  const filePath = `${process.cwd()}/storage/${id}${fileData.extension}`
   // If "download" is requested, set the appropriate headers
   if (req.query.action === "download") {
-    res.set("Content-Disposition", `attachment; filename=${fileData.name}`);
+    //OR res.set("Content-Disposition", `attachment; filename=${fileData.name}`);
+    return res.download(filePath, fileData.name)
   }
 
   // Send file
@@ -91,31 +76,22 @@ router.get("/:id", (req, res) => {
   });
 });
 
-// ================================
+
 // UPDATE
-// ================================
 router.patch("/:id", async (req, res, next) => {
   const { id } = req.params;
-  const fileData = filesData.find((file) => file.id === id);
+  const db = req.db;
+  const fileData = await db.collection("files").findOne({ _id: new ObjectId(String(id)), userId: req.user._id }); // here also check the parent directory ownership
 
   // Check if file exists
   if (!fileData) {
     return res.status(404).json({ error: "File not found!" });
   }
 
-  // Check parent directory ownership
-  const parentDir = directoriesData.find((dir) => dir.id === fileData.parentDirId);
-  if (!parentDir) {
-    return res.status(404).json({ error: "Parent directory not found!" });
-  }
-  if (parentDir.userId !== req.user.id) {
-    return res.status(403).json({ error: "You don't have access to this file." });
-  }
 
   // Perform rename
-  fileData.name = req.body.newFilename;
+  await db.collection("files").updateOne({ _id: new ObjectId(String(id)) }, { $set: { name: req.body.newFilename } })
   try {
-    await writeFile("./filesDB.json", JSON.stringify(filesData));
     return res.status(200).json({ message: "Renamed" });
   } catch (err) {
     err.status = 500;
@@ -123,40 +99,24 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
-// ================================
+
 // DELETE
-// ================================
 router.delete("/:id", async (req, res, next) => {
   const { id } = req.params;
-  const fileIndex = filesData.findIndex((file) => file.id === id);
+  const db = req.db;
+  const fileData = await db.collection("files").findOne({ _id: new ObjectId(String(id)), userId: req.user._id }); // here also check the parent directory ownership
 
-  // Check if file exists
-  if (fileIndex === -1) {
+  if (!fileData) {
     return res.status(404).json({ error: "File not found!" });
   }
 
-  const fileData = filesData[fileIndex];
-
-  // Check parent directory ownership
-  const parentDir = directoriesData.find((dir) => dir.id === fileData.parentDirId);
-  if (!parentDir) {
-    return res.status(404).json({ error: "Parent directory not found!" });
-  }
-  if (parentDir.userId !== req.user.id) {
-    return res.status(403).json({ error: "You don't have access to this file." });
-  }
 
   try {
     // Remove file from filesystem
     await rm(`./storage/${id}${fileData.extension}`, { recursive: true });
 
     // Remove file from DB
-    filesData.splice(fileIndex, 1);
-    parentDir.files = parentDir.files.filter((fileId) => fileId !== id);
-
-    // Persist changes
-    await writeFile("./filesDB.json", JSON.stringify(filesData));
-    await writeFile("./directoriesDB.json", JSON.stringify(directoriesData));
+    await db.collection("files").deleteOne({ _id: fileData._id })
 
     return res.status(200).json({ message: "File Deleted Successfully" });
   } catch (err) {
